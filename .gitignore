@@ -1,0 +1,10 @@
+build/
+managed_components/
+__pycache__/
+*.py[cod]
+*.local.*
+*.private.*
+*-private.*
+*.db
+*.sqlite*
+.env*

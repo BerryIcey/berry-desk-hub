@@ -1,0 +1,68 @@
+idf_component_register(
+    SRCS
+        "berry_main.c"
+        "berry_ui.c"
+        "berry_schedule.c"
+        "berry_temperature_fonts.c"
+        "berry_panel.c"
+        "berry_button.c"
+        "berry_power.c"
+        "berry_pickup.c"
+        "berry_button_policy.c"
+        "berry_battery_estimate.c"
+        "berry_portrait.c"
+        "berry_icons.c"
+        "berry_serial.c"
+        "berry_wifi.c"
+        "berry_http_date.c"
+        "berry_network_list.c"
+        "berry_network_store.c"
+        "berry_network_commit.c"
+        "berry_ble_provision.c"
+        "berry_pairing.c"
+        "berry_font_16.c"
+        "berry_font_20.c"
+        "berry_font_26.c"
+        "meter_account_selection.c"
+        "meter_activity_policy.c"
+        "meter_battery.c"
+        "meter_battery_policy.c"
+        "meter_buttons.c"
+        "meter_config.c"
+        "meter_config_requirements.c"
+        "meter_display.c"
+        "berry_touch_transform.c"
+        "meter_discovery.c"
+        "meter_orientation.c"
+        "meter_motion_policy.c"
+        "meter_orientation_policy.c"
+        "meter_rotation.c"
+        "meter_provisioning.c"
+        "meter_ui.c"
+        "transport_ble_gatt.c"
+        "transport_manager.c"
+        "transport_manager_policy.c"
+        "transport_wifi_http.c"
+        "usage_payload.c"
+    INCLUDE_DIRS "."
+    REQUIRES
+        bootloader_support
+        bt
+        esp_driver_i2c
+        esp_driver_usb_serial_jtag
+        esp_event
+        esp_http_client
+        esp_http_server
+        esp_netif
+        esp_timer
+        esp_wifi
+        json
+        mbedtls
+        mdns
+        nvs_flash
+        wifi_provisioning
+        waveshare__qmi8658
+)
+
+option(BERRY_LIGHT_THEME "Use the Berry light palette" ON)
+target_compile_definitions(${COMPONENT_LIB} PRIVATE BERRY_LIGHT_THEME=$<BOOL:${BERRY_LIGHT_THEME}>)

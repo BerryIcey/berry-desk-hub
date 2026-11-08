@@ -1,0 +1,301 @@
+menu "CodexMeter"
+
+menu "Network and host"
+
+choice METER_TRANSPORT_MODE
+    prompt "Usage data transport"
+    default METER_TRANSPORT_AUTO
+    help
+        AUTO and BOTH start Wi-Fi and BLE together. Wi-Fi keeps polling the
+        authenticated local cache while BLE accepts authenticated pushes from
+        the paired host. The manager keeps the freshest snapshot from either
+        path, so one link can transparently cover an outage on the other.
+
+config METER_TRANSPORT_AUTO
+    bool "Auto (Wi-Fi + BLE fallback)"
+
+config METER_TRANSPORT_WIFI
+    bool "Wi-Fi only"
+
+config METER_TRANSPORT_BLE
+    bool "BLE only (Wi-Fi setup on first use)"
+    help
+        Runs quota updates over BLE without enabling Wi-Fi after pairing. On a
+        factory-fresh device with no pairing token, the protected Wi-Fi setup
+        portal is started once; saving the configuration restarts into normal
+        BLE-only operation.
+
+config METER_TRANSPORT_BOTH
+    bool "Wi-Fi + BLE"
+
+endchoice
+
+if METER_TRANSPORT_BLE
+
+config METER_BLE_SETUP_HOLD_SECONDS
+    int "Hold touchscreen to reopen setup (seconds)"
+    range 3 10
+    default 5
+    help
+        Holding either UI page for this long is a physical recovery action.
+        It opens the password-protected setup access point so a lost or
+        replaced host can install a new BLE pairing token. BLE cannot trigger
+        this remotely.
+
+endif
+
+config METER_WIFI_SSID
+    string "Factory/development Wi-Fi SSID"
+    default ""
+    help
+        Optional migration value for development builds. Runtime settings in
+        NVS take precedence. Public firmware should leave this empty and use
+        the on-device setup portal.
+
+config METER_WIFI_PASSWORD
+    string "Factory/development Wi-Fi password"
+    default ""
+
+config METER_HOST
+    string "Manual host fallback"
+    default ""
+    help
+        Optional IPv4 address or hostname used only when the paired host cannot
+        be discovered with mDNS.
+
+config METER_HOST_ID
+    string "Factory/development host ID"
+    default ""
+    help
+        Stable host ID shown by the local Windows dashboard. This value is used
+        to choose the correct _codex-meter._tcp service when multiple hosts are
+        present. Public firmware should leave it empty.
+
+config METER_PAIRING_TOKEN
+    string "Factory/development pairing token"
+    default ""
+    help
+        Shared secret shown by the local Windows dashboard. It authenticates
+        nonce-bound HMAC requests and responses and is not included in normal
+        Wi-Fi or BLE transport frames. During setup, the browser submits it
+        over HTTP inside the temporary WPA2-protected device access point. It
+        is used only as a migration value for development builds. Never commit
+        sdkconfig files containing this value.
+
+config METER_PORT
+    int "Host TCP port"
+    range 1 65535
+    default 8787
+
+config METER_REFRESH_SECONDS
+    int "Local cache refresh interval (seconds)"
+    range 2 60
+    default 5
+    help
+        How often the ESP32 reads the cached payload from the Windows host.
+        This does not change the host's one-minute default OpenAI/Codex usage
+        polling interval (also the enforced minimum).
+
+config METER_WIFI_RETRY_LIMIT
+    int "Retries before reopening setup portal"
+    range 3 30
+    default 8
+    help
+        After this many consecutive station disconnects, the device enables a
+        protected setup access point while continuing to retry the saved Wi-Fi.
+
+config METER_HOST_RETRY_LIMIT
+    int "Host failures before reopening setup portal"
+    range 3 60
+    default 6
+    help
+        After this many consecutive discovery or authenticated HTTP failures,
+        the device enables the protected setup access point while continuing
+        to retry the saved host. This recovers from a stale host ID or address.
+
+endmenu
+
+menu "Account selection"
+
+config METER_ACCOUNT_BUTTON_GPIO18
+    bool "Use onboard GPIO18 Key3 for account selection"
+    default y
+    help
+        Uses the board's normal user key as an active-low account selector.
+        A short press selects the next account and a press held for at least
+        700 ms selects the previous account. Both gestures are ignored when
+        the host provides only one account.
+
+config METER_EXTERNAL_PREVIOUS_BUTTON_GPIO0
+    bool "Enable an independent external GPIO0 previous-account button"
+    default n
+    help
+        Advanced hardware option only. It expects a separate active-low
+        external button wired directly from GPIO0 to ground. The onboard Key2
+        is NOT suitable: its mechanically linked second pole also pulls
+        CHIP_PU low, resetting the ESP32-S3 and potentially selecting the ROM
+        download mode. Leave this disabled for the supported reference board.
+
+endmenu
+
+menu "Display and appearance"
+
+config METER_AUTO_ROTATE
+    bool "Rotate display automatically with QMI8658"
+    default y
+    help
+        Uses the onboard accelerometer to keep the UI upright. Rotation changes
+        only after gravity remains stable; when the device is flat or moving,
+        the last confirmed direction is retained.
+
+config METER_MOTION_WAKE
+    bool "Wake display and defer dimming on QMI8658 motion"
+    default y
+    help
+        Uses the onboard accelerometer to wake a dimmed display when the
+        device is picked up or moved. Continued motion refreshes the same
+        activity timer as touch, so dimming starts only after the device is
+        still for the configured idle period. This remains available when
+        automatic rotation is disabled.
+
+if METER_AUTO_ROTATE || METER_MOTION_WAKE
+
+config METER_ROTATION_SAMPLE_MS
+    int "QMI8658 sample interval (milliseconds)"
+    range 40 250
+    default 50
+    help
+        How often the shared orientation and motion task checks for a fresh
+        accelerometer sample. The sensor itself runs at 31.25 Hz, so lower
+        values do not increase the effective measurement rate.
+
+endif
+
+if METER_AUTO_ROTATE
+
+config METER_ROTATION_STABLE_MS
+    int "Stable time before rotating (milliseconds)"
+    range 300 3000
+    default 600
+    help
+        A new direction must remain dominant for this long before the display
+        and touch coordinates rotate.
+
+config METER_ROTATION_THRESHOLD_MG
+    int "Minimum in-plane gravity for rotation (mg)"
+    range 500 850
+    default 650
+    help
+        Higher values require the device to be held more upright. A dead zone
+        around diagonal and face-up positions prevents rotation chatter.
+
+endif
+
+if METER_MOTION_WAKE
+
+config METER_MOTION_THRESHOLD_MG
+    int "Motion wake threshold (mg)"
+    range 20 500
+    default 80
+    help
+        Three-axis acceleration change required to report motion. The
+        detector combines adjacent-sample change with deviation from a slow,
+        adaptive gravity baseline. Lower values respond to gentler movement
+        but are more sensitive to vibration.
+
+config METER_MOTION_HOLD_MS
+    int "Motion activity hold time (milliseconds)"
+    range 100 5000
+    default 1000
+    help
+        Keeps motion active briefly after the last detected acceleration
+        change. New movement extends the hold; the hold itself never extends
+        recursively. After it expires, the normal display idle timer starts
+        from the last published activity.
+
+endif
+
+config METER_BRIGHTNESS
+    int "Active AMOLED brightness (%)"
+    range 5 100
+    default 65
+
+config METER_IDLE_DIM_SECONDS
+    int "Dim after no activity (seconds, 0 disables)"
+    range 0 3600
+    default 60
+    help
+        Reduces AMOLED brightness after the selected period without touch or
+        detected QMI8658 motion. Motion wakes the display without consuming
+        the next touch; a touch that itself wakes a still device does not
+        change pages.
+
+config METER_IDLE_BRIGHTNESS
+    int "Idle AMOLED brightness (%)"
+    range 5 100
+    default 30
+    help
+        Dimming is disabled when this value is equal to or higher than the
+        active brightness.
+
+config METER_WARNING_REMAINING
+    int "Attention theme below remaining (%)"
+    range 21 90
+    default 35
+    help
+        Remaining quota below this value uses the orange attention theme.
+
+config METER_CRITICAL_REMAINING
+    int "Low theme below remaining (%)"
+    range 11 60
+    default 15
+    help
+        Remaining quota below this value uses the red low-quota theme.
+        This value must be lower than the attention threshold.
+
+config METER_URGENT_REMAINING
+    int "Almost-out message below remaining (%)"
+    range 1 30
+    default 10
+    help
+        Remaining quota below this value keeps the red theme and changes the
+        status copy to an explicit almost-out warning. This value must be
+        lower than the low threshold.
+
+config METER_THEME_HYSTERESIS
+    int "Theme threshold hysteresis (%)"
+    range 0 10
+    default 3
+    help
+        Extra recovery margin required before moving back to a healthier
+        color. This prevents color flicker when rounded server values change.
+
+menu "Battery"
+
+config METER_BATTERY_POLL_SECONDS
+    int "AXP2101 sample interval (seconds)"
+    range 1 60
+    default 5
+    help
+        How often the onboard AXP2101 is sampled. The UI keeps the last good
+        sample for six intervals before showing an unknown state.
+
+config METER_BATTERY_LOW_PERCENT
+    int "Low-battery warning at or below (%)"
+    range 15 40
+    default 20
+    help
+        The compact battery indicator turns orange at or below this value.
+
+config METER_BATTERY_CRITICAL_PERCENT
+    int "Critical-battery warning at or below (%)"
+    range 1 14
+    default 10
+    help
+        The compact battery indicator turns red at or below this value.
+
+endmenu
+
+endmenu
+
+endmenu
