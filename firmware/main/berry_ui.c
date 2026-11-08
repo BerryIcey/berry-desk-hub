@@ -521,7 +521,6 @@ static void tick(lv_timer_t *timer) {
     unsigned now=lv_tick_get(),elapsed=pet_last_policy_tick?now-pet_last_policy_tick:0;pet_last_policy_tick=now;
     if(elapsed>2500){memset(pet_busy_ms,0,sizeof(pet_busy_ms));memset(pet_hot_ms,0,sizeof(pet_hot_ms));pet_offline_ms=0;elapsed=0;}
     cJSON *policy=last_data[0]?cJSON_Parse(last_data):NULL;pet_policy_update(policy,elapsed);cJSON_Delete(policy);
-    if(pet_low_battery_spoken)pet_battery_update(pet_battery_read());
     pager_service();
 #ifndef BERRY_SIMULATOR
     unsigned previous_events=task_events;

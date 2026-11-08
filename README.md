@@ -2,9 +2,9 @@
 
 Berry Desk Hub 是一块基于 **Waveshare ESP32-S3-Touch-AMOLED-2.16** 的 480 × 480 桌面状态屏。左右轻扫查看 Codex 任务、电脑和服务器状态，也可以翻到天气、课表或宠物。下拉状态中心，直接调亮度、切换主题或设置网络。
 
-[下载固件](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08/berry-desk-hub-firmware-2026.11.08.zip) · [固件 SHA-256](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08/berry-desk-hub-firmware-2026.11.08.sha256) · [源码 ZIP](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08/berry-desk-hub-source.zip) · [源码 SHA-256](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08/berry-desk-hub-source.sha256) · [版本说明](CHANGELOG.md)
+[下载固件](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08.1/berry-desk-hub-firmware-2026.11.08.1.zip) · [固件 SHA-256](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08.1/berry-desk-hub-firmware-2026.11.08.1.sha256) · [源码 ZIP](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08.1/berry-desk-hub-source.zip) · [源码 SHA-256](https://github.com/BerryIcey/berry-desk-hub/releases/download/berry-desk-hub-2026.11.08.1/berry-desk-hub-source.sha256) · [版本说明](CHANGELOG.md)
 
-当前版本 **2026.11.08**。
+当前版本 **2026.11.08.1**。
 
 [逐页图册](#gallery) · [状态中心与提醒](#controls) · [刷写固件](#install) · [源码构建与数据接入](#data)
 
@@ -66,9 +66,11 @@ CPU 和 GPU 各有一张卡，左边的仪表显示占用率，右边显示温�
 
 ### 07 · 小宠物
 
-圆眼宠物会眨眼、转动视线。平时安静，有新情况才弹气泡。翻到这页时可看到低电量、临近上课、任务待处理、降雨或周额度不足等提示。轻触可以查看课表、硬件温度与占用、电量与续航、周额度等读数。原有高温、持续高负载和明确离线提示优先显示。
+圆眼宠物会眨眼、转动视线。轻触小圆球，每次都会做动作，约一半的点按还会显示气泡。12 条情境台词只在条件成立时参与抽选，例如真实的课表、天气、硬件读数和周额度。把当前可说的台词随机说完一轮后，再开始下一轮。手头只有一条符合条件时，这条也可以继续出现。
 
-周额度在同一周期内降到 10%、5%、0% 时，翻到本页可各收到一次提示。气泡同时显示重置时间。如果曾收到有效监控采样，之后连续五分钟没有新采样，轻触会提示读数可能过时。每次断更只提醒一次，恢复后重新计时。使用该功能需要新版数据服务传递硬件的实际采样时间。
+翻到这一页时，可轮播低电量、临近上课、任务待处理、降雨或低额度提示。周额度不超过 10% 且重置时间有效时，会显示剩余额度与北京时间的重置时刻。如果曾收到有效监控采样，之后连续五分钟没有新采样，点按时会把断更提示纳入轮播。新采样到达后，这条自动退出。该功能需要数据服务传递实际采样时间。
+
+高温、持续高负载和明确离线等状态仍会在检测到变化时提示。顶部任务通知按任务状态变化触发。
 
 | 浅色 | 深色 |
 | --- | --- |
@@ -140,7 +142,7 @@ CPU 和 GPU 各有一张卡，左边的仪表显示占用率，右边显示温�
 
 ```powershell
 py -m pip install esptool==4.12.0
-Get-FileHash .\berry-desk-hub-firmware-2026.11.08.zip -Algorithm SHA256
+Get-FileHash .\berry-desk-hub-firmware-2026.11.08.1.zip -Algorithm SHA256
 ```
 
 校验 ZIP 后解压，进入含 `.bin` 文件的目录。**同版式设备更新**适用于已经运行 Berry 且应用起始地址为 `0x10000` 的设备，仅写应用分区。
@@ -168,6 +170,8 @@ py -m esptool --chip esp32s3 --port COM3 --baud 460800 write_flash --flash_mode 
 
 仓库和源码包包含固件、采集器、服务代码及构建配置。课表和界面数据使用示例，部署时请自行配置账号、设备与服务器。
 
-## 来源与许可证
+## 开源来源与许可证
 
-本项目原创代码采用 [MIT 许可证](LICENSE)。固件基于 [Waveshare Codex Meter](https://github.com/waveshareteam/codex-meter) 适配。宠物几何使用 [GrokBot](https://github.com/nasawz/GrokBot) 和 [grokbot-web](https://github.com/Coiggahou2002/grokbot-web) 的 BSD-3-Clause 实现。下载版中文字形取自 [思源黑体](https://github.com/adobe-fonts/source-han-sans)，SIL OFL 1.1。版权与许可文本随包提供。`berry-hub-reference-codex-meter/` 的 Codex 客户端代码保留 MIT 许可。
+Berry Desk Hub 的原创代码采用 [MIT 许可证](LICENSE)。固件和 Codex 通信基于 **Waveshare Codex Meter**，小圆球的表情和动画几何来自 **GrokBot / grokbot-web**。界面使用 **LVGL**，板端构建使用 **ESP-IDF**，公开版字形来自 **思源黑体**。
+
+各项目的具体用途、原项目链接和随包许可证见 [第三方来源与许可证](THIRD_PARTY_NOTICES.md)。

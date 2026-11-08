@@ -40,14 +40,15 @@ static void pet_interact(bool tapped) {
     uint32_t tick=lv_tick_get();
     pet_action(true);
     pet_blink_at=tick;
-    if(pet_scene!=PET_UNKNOWN&&pet_say_status())return;
-    cJSON *data=last_data[0]?cJSON_Parse(last_data):NULL;
-    bool spoken=pet_report_useful(data,time(NULL),tick,tapped,pet_battery_read());
-    cJSON_Delete(data);
-    if(!spoken&&!tapped) {
-        pet_bubble_text[0]='\0';
-        pet_bubble_apply();
+    if(!tapped&&pet_scene!=PET_UNKNOWN&&pet_say_status())return;
+    if(!tapped||(pet_rand()&1u)) {
+        cJSON *data=last_data[0]?cJSON_Parse(last_data):NULL;
+        bool spoken=pet_report_useful(data,time(NULL),tick,tapped,pet_battery_read());
+        cJSON_Delete(data);
+        if(spoken||(tapped&&pet_scene!=PET_UNKNOWN&&pet_say_status()))return;
     }
+    pet_bubble_text[0]='\0';
+    pet_bubble_apply();
 }
 static void pet_on_enter(void){
     pet_interact(false);

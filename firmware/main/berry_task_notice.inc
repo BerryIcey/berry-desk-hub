@@ -3,7 +3,6 @@ typedef struct {
     int64_t observed;
     bool running;
     unsigned announced;
-    unsigned queued, shown, pet_spoken;
 } berry_task_seen_t;
 static berry_task_seen_t task_seen[12];
 static unsigned task_events,task_shown,task_pending_count;
@@ -38,27 +37,20 @@ static int64_t task_fresh_observation(const cJSON *data,int64_t now) {
        now<1700000000||observed<=0||observed>now+5||now-observed>120)return 0;
     return observed;
 }
-static unsigned task_pet_waiting(const cJSON *data,int64_t now,unsigned kind,bool mark) {
-    int64_t observed=task_fresh_observation(data,now);
-    if(!observed)return 0;
+static unsigned task_pet_waiting(const cJSON *data,int64_t now,unsigned kind) {
+    if(!task_fresh_observation(data,now))return 0;
     const cJSON *tasks=item(item(data,"codex"),"recent_tasks");
     const char *state=kind==2?"waiting_approval":"blocked";
-    unsigned found=0;
+    const char *keys[4];
+    unsigned count=0;
     for(int i=0;i<cJSON_GetArraySize(tasks)&&i<4;i++) {
         const cJSON *task=cJSON_GetArrayItem(tasks,i);
         const char *key=str(task,"notice_key","");
         if(!task_key_valid(key)||strcmp(str(task,"notice_state",""),state))continue;
-        for(unsigned j=0;j<12;j++) {
-            berry_task_seen_t *seen=&task_seen[j];
-            if(seen->observed!=observed||strcmp(seen->key,key)||
-               ((seen->queued|seen->shown|seen->pet_spoken)&kind)||(found&(1u<<j)))continue;
-            found|=1u<<j;
-            if(mark)seen->pet_spoken|=kind;
-            break;
-        }
+        unsigned j=0;
+        while(j<count&&strcmp(keys[j],key))j++;
+        if(j==count)keys[count++]=key;
     }
-    unsigned count=0;
-    for(;found;found&=found-1)count++;
     return count;
 }
 static void task_notice_update(const cJSON *data,int64_t now) {
@@ -80,7 +72,7 @@ static void task_notice_update(const cJSON *data,int64_t now) {
         if(seen->observed&&observed-seen->observed>120)seen->running=false;
         unsigned kind=strcmp(state,"completed")==0?1:strcmp(state,"waiting_approval")==0?2:strcmp(state,"blocked")==0?4:0;
         if(kind&&seen->running&&!(seen->announced&kind)) {
-            seen->announced|=kind;seen->queued|=kind;task_events++;task_pending_count++;
+            seen->announced|=kind;task_events++;task_pending_count++;
             task_pending_kind=kind;task_pending_until=lv_tick_get()+120000;
             snprintf(task_pending_title,sizeof(task_pending_title),"%s",str(task,"title","Codex"));
             snprintf(task_pending_key,sizeof(task_pending_key),"%s",key);
@@ -205,7 +197,6 @@ static void task_notice_service(bool screen_off) {
     if(!task_notice_box)return;
     uint32_t now=lv_tick_get();
     if(task_pending_count&&(int32_t)(task_pending_until-now)<=0)task_pending_count=0;
-    if(!task_pending_count)for(unsigned i=0;i<12;i++)task_seen[i].queued=0;
     if(screen_off||task_notice_blocked()) {
         lv_obj_add_flag(task_notice_box,LV_OBJ_FLAG_HIDDEN);task_notice_until=0;return;
     }
@@ -219,10 +210,6 @@ static void task_notice_service(bool screen_off) {
         if(task_pending_count>1){snprintf(combined,sizeof(combined),"%u 条任务更新",task_pending_count);heading=combined;}
         notice_layout(task_notice_box,task_notice_heading,task_notice_title,heading,task_pending_title);
         lv_obj_remove_flag(task_notice_box,LV_OBJ_FLAG_HIDDEN);lv_obj_move_foreground(task_notice_box);
-        for(unsigned i=0;i<12;i++) {
-            task_seen[i].shown|=task_seen[i].queued;
-            task_seen[i].queued=0;
-        }
         task_pending_count=0;task_notice_until=now+6000;task_shown++;
     }
 }
